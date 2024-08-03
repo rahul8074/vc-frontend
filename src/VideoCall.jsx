@@ -13,7 +13,7 @@ const VideoCall = () => {
 
   useEffect(() => {
     // Update the URL to your deployed backend
-    socketRef.current = io('https://vc-backend-three.vercel.app');
+    socketRef.current = io('https://vc-backend-oih5.onrender.com');
 
     const peerConnection = peerConnectionRef.current;
 
