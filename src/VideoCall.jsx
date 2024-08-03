@@ -8,6 +8,7 @@ const VideoCall = () => {
   const peerConnectionRef = useRef(new RTCPeerConnection({
     iceServers: [
       { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
     ],
   }));
   const socketRef = useRef();
