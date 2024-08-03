@@ -1,5 +1,9 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import io from 'socket.io-client';
+import { Button, Container, Grid, Typography, Paper } from '@mui/material';
+import VideocamIcon from '@mui/icons-material/Videocam';
+import CallEndIcon from '@mui/icons-material/CallEnd';
+import CameraSwitchIcon from '@mui/icons-material/CameraSwitch';
 
 const VideoCall = () => {
   const localVideoRef = useRef();
@@ -10,6 +14,10 @@ const VideoCall = () => {
     ],
   }));
   const socketRef = useRef();
+  const [inCall, setInCall] = useState(false);
+  const [localStream, setLocalStream] = useState(null);
+  const [currentCamera, setCurrentCamera] = useState(0);
+  const [cameras, setCameras] = useState([]);
 
   useEffect(() => {
     // Update the URL to your deployed backend
@@ -48,26 +56,104 @@ const VideoCall = () => {
       peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
     });
 
-    (async () => {
-      const localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      localStream.getTracks().forEach((track) => peerConnection.addTrack(track, localStream));
-      localVideoRef.current.srcObject = localStream;
-      const offer = await peerConnection.createOffer();
-      await peerConnection.setLocalDescription(offer);
-      console.log('Sending offer:', offer);
-      socketRef.current.emit('offer', offer);
-    })();
-
     return () => {
       socketRef.current.disconnect();
     };
   }, []);
 
+  const startCall = async () => {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const videoDevices = devices.filter(device => device.kind === 'videoinput');
+    setCameras(videoDevices);
+    const localStream = await getUserMedia(videoDevices[0].deviceId);
+    setLocalStream(localStream);
+    localStream.getTracks().forEach((track) => peerConnectionRef.current.addTrack(track, localStream));
+    localVideoRef.current.srcObject = localStream;
+    const offer = await peerConnectionRef.current.createOffer();
+    await peerConnectionRef.current.setLocalDescription(offer);
+    console.log('Sending offer:', offer);
+    socketRef.current.emit('offer', offer);
+    setInCall(true);
+  };
+
+  const getUserMedia = async (deviceId) => {
+    const constraints = {
+      video: { deviceId: deviceId ? { exact: deviceId } : undefined },
+      audio: true
+    };
+    return await navigator.mediaDevices.getUserMedia(constraints);
+  };
+
+  const switchCamera = async () => {
+    if (cameras.length < 2) return;
+    const newCameraIndex = (currentCamera + 1) % cameras.length;
+    const newStream = await getUserMedia(cameras[newCameraIndex].deviceId);
+    const videoTrack = newStream.getVideoTracks()[0];
+    const sender = peerConnectionRef.current.getSenders().find(s => s.track.kind === videoTrack.kind);
+    sender.replaceTrack(videoTrack);
+    setCurrentCamera(newCameraIndex);
+    setLocalStream(newStream);
+    localVideoRef.current.srcObject = newStream;
+  };
+
+  const endCall = () => {
+    peerConnectionRef.current.close();
+    setInCall(false);
+  };
+
   return (
-    <div>
-      <video ref={localVideoRef} autoPlay muted />
-      <video ref={remoteVideoRef} autoPlay />
-    </div>
+    <Container>
+      <Typography variant="h3" align="center" gutterBottom>
+        Video Call
+      </Typography>
+      <Grid container spacing={3} justifyContent="center">
+        <Grid item xs={12} md={6}>
+          <Paper elevation={3}>
+            <video ref={localVideoRef} autoPlay muted style={{ width: '100%' }} />
+          </Paper>
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <Paper elevation={3}>
+            <video ref={remoteVideoRef} autoPlay style={{ width: '100%' }} />
+          </Paper>
+        </Grid>
+      </Grid>
+      <Grid container spacing={3} justifyContent="center" style={{ marginTop: '20px' }}>
+        <Grid item>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<VideocamIcon />}
+            onClick={startCall}
+            disabled={inCall}
+          >
+            Start Call
+          </Button>
+        </Grid>
+        <Grid item>
+          <Button
+            variant="contained"
+            color="secondary"
+            startIcon={<CallEndIcon />}
+            onClick={endCall}
+            disabled={!inCall}
+          >
+            End Call
+          </Button>
+        </Grid>
+        <Grid item>
+          <Button
+            variant="contained"
+            color="default"
+            startIcon={<CameraSwitchIcon />}
+            onClick={switchCamera}
+            disabled={!inCall || cameras.length < 2}
+          >
+            Switch Camera
+          </Button>
+        </Grid>
+      </Grid>
+    </Container>
   );
 };
 

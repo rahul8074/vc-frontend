@@ -1,16 +1,20 @@
-import { useState } from 'react'
-import './App.css'
-import VideoCall from './VideoCall'
+import React from 'react';
+import VideoCall from './VideoCall';
+import './App.css';
+import { CssBaseline, Container, Typography } from '@mui/material';
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-     <div>Video Calling</div>
-     <VideoCall />
-    </>
-  )
+    <div className="App">
+      <CssBaseline />
+      <Container>
+        <Typography variant="h2" align="center" gutterBottom>
+          Video Calling App
+        </Typography>
+        <VideoCall />
+      </Container>
+    </div>
+  );
 }
 
-export default App
+export default App;
