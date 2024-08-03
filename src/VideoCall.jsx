@@ -19,16 +19,19 @@ const VideoCall = () => {
 
     peerConnection.onicecandidate = (event) => {
       if (event.candidate) {
+        console.log('Sending ICE candidate:', event.candidate);
         socketRef.current.emit('candidate', event.candidate);
       }
     };
 
     peerConnection.ontrack = (event) => {
+      console.log('Received remote track:', event.streams);
       const [remoteStream] = event.streams;
       remoteVideoRef.current.srcObject = remoteStream;
     };
 
     socketRef.current.on('offer', async (offer) => {
+      console.log('Received offer:', offer);
       await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
       const answer = await peerConnection.createAnswer();
       await peerConnection.setLocalDescription(answer);
@@ -36,10 +39,12 @@ const VideoCall = () => {
     });
 
     socketRef.current.on('answer', async (answer) => {
+      console.log('Received answer:', answer);
       await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
     });
 
     socketRef.current.on('candidate', (candidate) => {
+      console.log('Received ICE candidate:', candidate);
       peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
     });
 
@@ -49,6 +54,7 @@ const VideoCall = () => {
       localVideoRef.current.srcObject = localStream;
       const offer = await peerConnection.createOffer();
       await peerConnection.setLocalDescription(offer);
+      console.log('Sending offer:', offer);
       socketRef.current.emit('offer', offer);
     })();
 
