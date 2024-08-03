@@ -34,14 +34,18 @@ const VideoCall = () => {
     };
 
     socketRef.current.on('offer', async (offer) => {
-      await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
-      const answer = await peerConnection.createAnswer();
-      await peerConnection.setLocalDescription(answer);
-      socketRef.current.emit('answer', answer);
+      if (!peerConnection.currentRemoteDescription) {
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+        const answer = await peerConnection.createAnswer();
+        await peerConnection.setLocalDescription(answer);
+        socketRef.current.emit('answer', answer);
+      }
     });
 
     socketRef.current.on('answer', async (answer) => {
-      await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+      if (!peerConnection.currentRemoteDescription) {
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+      }
     });
 
     socketRef.current.on('candidate', (candidate) => {
